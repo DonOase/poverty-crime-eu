@@ -1,79 +1,50 @@
 import pandas as pd
-import numpy as np
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.vector_ar.var_model import VAR
-from itertools import combinations
+import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-panel = pd.read_csv('data/panel_clean.csv')
+# 1. Încărcare date
+df = pd.read_csv('../data/panel_final_v2.csv')
 
-east = ['BG','CZ','EE','HR','HU','LV','LT','PL','RO','SI','SK']
-panel['region'] = panel['country'].apply(lambda x: 'Est' if x in east else 'Vest')
+# 2. Creăm variabila de interacțiune (miezul analizei tale)
+# Aceasta ne spune dacă impactul sărăciei se schimbă în țările din Est
+df['poverty_X_east'] = df['poverty_rate'] * df['is_east']
 
-# ── 1. Identifici outlierul ──
-print("=== Top 5 țări după criminalitate medie ===")
-print(panel.groupby('country')['crime_rate'].mean().sort_values(ascending=False).head(5).round(2))
+print("=" * 60)
+print("MODELUL DE REGRESIE: SĂRĂCIE vs FURT (EFECTE FIXE)")
+print("=" * 60)
 
-# ── 2. Unit root test per țară (ADF) ──
-print("\n=== ADF Test — stationaritate ===")
-results = []
-for country in panel['country'].unique():
-    subset = panel[panel['country'] == country].sort_values('year')
-    for var in ['poverty_rate', 'crime_rate']:
-        series = subset[var].dropna()
-        if len(series) >= 5:
-            adf_stat, p_val, _, _, _, _ = adfuller(series)
-            results.append({
-                'country': country,
-                'variable': var,
-                'adf_stat': round(adf_stat, 3),
-                'p_value': round(p_val, 3),
-                'stationary': 'DA' if p_val < 0.05 else 'NU'
-            })
+# Utilizăm OLS cu 'C(geo)' pentru a simula Efectele Fixe (Entity Fixed Effects)
+# Asta elimină diferențele culturale/structurale neschimbătoare dintre țări
+model = smf.ols('theft_rate ~ poverty_rate + unemployment + is_east + poverty_X_east + C(geo)', data=df).fit()
 
-adf_df = pd.DataFrame(results)
-print(adf_df.groupby(['variable', 'stationary']).size().reset_index(name='count'))
+print(model.summary())
 
-# ── 3. Panel VAR + Granger causality ──
-print("\n=== Granger Causality — UE27 ===")
+# 3. Extragere coeficienți relevanți pentru interpretare
+coef_poverty = model.params['poverty_rate']
+coef_interaction = model.params['poverty_X_east']
+p_interaction = model.pvalues['poverty_X_east']
 
-granger_results = []
+print("\n" + "=" * 60)
+print("INTERPRETARE REZULTATE:")
+print(f"1. Impact general sărăcie: {coef_poverty:.4f}")
+print(f"2. Diferență Est vs Vest: {coef_interaction:.4f}")
 
-for country in panel['country'].unique():
-    subset = panel[panel['country'] == country].sort_values('year')
-    data = subset[['poverty_rate', 'crime_rate']].dropna()
-    
-    if len(data) < 6:
-        continue
-    
-    try:
-        model = VAR(data)
-        fitted = model.fit(maxlags=2, ic='aic')
-        
-        # Granger: sărăcia cauzează criminalitatea?
-        test1 = fitted.test_causality('crime_rate', ['poverty_rate'], kind='f')
-        # Granger: criminalitatea cauzează sărăcia?
-        test2 = fitted.test_causality('poverty_rate', ['crime_rate'], kind='f')
-        
-        granger_results.append({
-            'country': country,
-            'region': 'Est' if country in east else 'Vest',
-            'poverty_causes_crime_p': round(test1.pvalue, 3),
-            'crime_causes_poverty_p': round(test2.pvalue, 3),
-        })
-    except Exception as e:
-        print(f"  {country}: eroare — {e}")
+if p_interaction < 0.05:
+    print(f"✅ REZULTAT: Paradoxul Estului este CONFIRMAT (p={p_interaction:.4f})")
+    if coef_interaction < 0:
+        print("   -> În Est, creșterea sărăciei are un impact MAI MIC asupra furtului decât în Vest.")
+    else:
+        print("   -> În Est, impactul sărăciei este chiar mai agresiv.")
+else:
+    print(f"❌ REZULTAT: Paradoxul nu este semnificativ statistic (p={p_interaction:.4f}).")
+    print("   Sărăcia pare să afecteze furtul în mod similar în toată Uniunea Europeană.")
 
-gr_df = pd.DataFrame(granger_results)
-gr_df['H1_sustinuta'] = gr_df['poverty_causes_crime_p'] < 0.05
-gr_df['H2_sustinuta'] = gr_df['crime_causes_poverty_p'] < 0.05
-
-print(gr_df.to_string(index=False))
-
-print("\n=== Sumar Granger ===")
-print(f"H1 (sărăcia → criminalitatea): {gr_df['H1_sustinuta'].sum()} țări din {len(gr_df)}")
-print(f"H2 (criminalitatea → sărăcia): {gr_df['H2_sustinuta'].sum()} țări din {len(gr_df)}")
-print(f"\nPer regiune:")
-print(gr_df.groupby('region')[['H1_sustinuta','H2_sustinuta']].sum())
-
-gr_df.to_csv('data/granger_results.csv', index=False)
-print("\nSalvat în data/granger_results.csv")
+# 4. Vizualizare grafică a diferenței
+plt.figure(figsize=(10, 6))
+sns.lmplot(x='poverty_rate', y='theft_rate', hue='is_east', data=df, 
+           palette={0: 'blue', 1: 'red'}, markers=["o", "x"], height=6)
+plt.title('Relația Sărăcie - Furt: Vest (Albastru) vs Est (Roșu)')
+plt.xlabel('Rata Sărăciei (%)')
+plt.ylabel('Rata Furturilor (la 100k locuitori)')
+plt.savefig
