@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+# Opțional: dacă datele brute sunt foarte mari, poți ignora folderul data/raw/
