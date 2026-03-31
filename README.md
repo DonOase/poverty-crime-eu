@@ -1,75 +1,31 @@
-# Poverty & Crime in the EU — Computational Sociology Project
+# Two Europes, Two Mechanisms: Regional Heterogeneity in the Poverty–Crime Relationship (EU27)
 
-## Research Question
-Do EU countries steal because they are poor, or are they poor because they steal?
-A Granger causality analysis testing the Marxian (structural) vs. Weberian (cultural)
-paradigm on panel data for 27 EU member states, 2014–2022.
+This repository contains the full analytical pipeline for a panel data study on the socio-economic determinants of crime across the European Union (2014–2022). The study tests the competing and complementary roles of **Marxian (material deprivation)** and **Weberian (institutional/anomie)** mechanisms.
 
-## Hypotheses
-- **H1 (Marxian):** Poverty Granger-causes crime
-- **H2 (Weberian):** Crime Granger-causes poverty
-- **H3 (Heterogeneity):** The causal direction differs between Eastern and Western EU
+## 📌 Project Overview
+The research explores why poverty and institutional quality affect crime differently across the EU. The main finding identifies a clear divergence:
+* **Central and Eastern Europe (ECE):** Dominated by the **Marxian mechanism** (poverty and long-term unemployment).
+* **Western & Northern Europe (WEST):** Dominated by the **Weberian mechanism** (Rule of Law and institutional quality).
 
-## Data Sources
-| Variable | Indicator | Source |
-|---|---|---|
-| Poverty rate | `ilc_li02` — at-risk-of-poverty rate | Eurostat |
-| Gini coefficient | `ilc_di12` | Eurostat |
-| Unemployment | `une_rt_a` — total, 15–74, % active pop. | Eurostat |
-| Crime rate | `crim_off_cat` — theft (ICCS0401), per 100k | Eurostat |
+## 🛠️ Repository Structure
+The project is organized into a sequential pipeline:
 
-**Coverage:** 27 EU countries × 9 years (2014–2022) = 243 observations, balanced panel, 0 missing values.
+- `01_collect_data.py`: Automated data extraction from **Eurostat API** and **World Bank (WGI)**.
+- `02_clean_impute.py`: Data cleaning, outlier detection, and K-Nearest Neighbors (KNN) imputation for missing values.
+- `03_stationarity.py`: Unit root testing (IPS Test) and stationarity checks via ACF plots.
+- `04_panel_fe.py`: Estimation of **Fixed Effects (FE) Models** with Driscoll-Kraay robust standard errors.
+- `05_tables.py`: Automated generation of publication-ready tables and results summary.
+- `/data`: Contains raw, processed datasets and regression outputs.
+- `/plots`: Visualizations (Correlation matrices, ACF plots, and Coefficient charts).
 
-**Note on Gini:** Available only from 2014 onward on Eurostat (`ilc_di12`).
-This limits the panel to 2014–2022. Acknowledged as limitation in the paper.
+## 📊 Key Findings
+The study validates four main hypotheses:
+1.  **H1 (Marxian):** Material deprivation is a significant predictor of crime in the full EU27 sample.
+2.  **H2 (Weberian):** Institutional quality (Rule of Law) is a primary predictor, specifically for property crime.
+3.  **H3 (Heterogeneity):** There is a structural divergence; Rule of Law is only significant in the WEST subsample.
+4.  **H4 (Crime Type):** Unemployment has a stronger effect on property crime (instrumental) than on homicide (expressive).
 
-**Note on Romania:** Excluded from Granger causality models — VAR selected 0 lags
-(insufficient temporal variation). Retained in descriptive statistics.
-
-## Scripts — Run in Order
-
-### `01_collect_data.py`
-Downloads all variables from Eurostat API using the `eurostat` Python package.
-Merges into a single panel DataFrame.
-Output: `data/panel_raw.csv`
-
-### `02_descriptive.py`
-Computes descriptive statistics and produces exploratory visualizations.
-Splits countries into East vs. West EU groups.
-Output: `data/descriptive_trends.png`, `data/scatter_poverty_crime.png`
-
-### `03_models.py`
-Runs ADF unit root tests per country and per variable.
-Estimates VAR models and Granger causality tests (F-test) for each country.
-Output: `data/granger_results.csv`
-
-### `04_visualize.py`
-Produces publication-ready figures from Granger results.
-Output: `data/granger_heatmap.png`, `data/granger_summary.png`, `data/trends_east_west.png`
-
-## Key Findings
-1. **Structural paradox:** Eastern EU countries have higher poverty but significantly
-   lower crime rates than Western EU — contradicting a simple linear Marx hypothesis.
-2. **No universal causality:** In 18 out of 26 countries, neither H1 nor H2 is
-   supported (p > 0.05). Context matters more than any universal mechanism.
-3. **Regional asymmetry (H3 supported):** In the East, H2 dominates (3 countries vs. 1).
-   Post-communist dynamics suggest crime/corruption perpetuated poverty, not vice versa.
-
-## Dependencies
-```bash
-pip install eurostat pandas numpy matplotlib seaborn statsmodels
-```
-
-## Target Journal
-Social Science Research (Elsevier) — SSCI Q1, IF ~4.1
-Fallback: European Sociological Review (Oxford) — SSCI Q1
-
-## Project Status
-- [x] Data collection
-- [x] Descriptive statistics
-- [x] Granger causality models
-- [x] Visualizations
-- [ ] Theoretical framework (writing)
-- [ ] Results section (writing)
-- [ ] Discussion & conclusions (writing)
-- [ ] Submission
+## 🚀 How to Run
+1. **Clone the repo:**
+   ```bash
+   git clone [https://github.com/your-username/two-europes-crime.git](https://github.com/your-username/two-europes-crime.git)
