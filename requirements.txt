@@ -1,0 +1,21 @@
+# Data Manipulation & Collection
+pandas
+numpy
+eurostat
+requests
+openpyxl
+
+# Visualization
+matplotlib
+seaborn
+
+# Econometrics & Statistics
+statsmodels
+linearmodels
+scipy
+
+# Machine Learning (for KNN Imputation)
+scikit-learn
+
+# Reporting (Optional, used in script 05)
+python-docx
